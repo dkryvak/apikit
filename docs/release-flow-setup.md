@@ -1,54 +1,59 @@
-# Release Flow: Tag Flow з main + hotfix
+# Release Flow: Tag Flow with main + hotfix
 
-Підсумок налаштованого гіт-флоу та CI/CD для репозиторію.
+Summary of the configured git flow and CI/CD for the repository.
 
-## 1. Загальна модель (Tag Flow)
+## 1. Overall model (Tag Flow)
 
-**Гілки**: `main`, `feature/*`, `hotfix/*`
-**Без**: `develop`, `release/*`, `bugfix/*` (свідомо не використовуються)
+**Operational branches** (CI jobs and rulesets key off these): `main`, `hotfix/*`
 
-**Тригери деплою**:
-- `push` у `main` → деплой на **stage**
-- `push` тегу (`v*`) → деплой на **prod** (незалежно, з якої гілки технічно стоїть тег)
+**Working branches** (merged into `main` via PR): `feature/*`, `bugfix/*`, `chore/*`, `refactor/*`, `docs/*`, `spike/*`
+
+**Deploy triggers**:
+- `push` to `main` → deploy to **stage**
+- `push` of a tag (`v*`) → deploy to **prod** (regardless of which branch the tag technically points to)
 
 ```
-main      ──●──●──●──●──●──●── (кожен мердж → stage)
+main      ──●──●──●──●──●──●── (every merge → stage)
                         │
                       tag v1.4.0 ──→ deploy prod
 ```
 
-## 2. Нейминг
+## 2. Naming
 
-| Сутність | Формат | Приклад |
+| Entity | Format | Example |
 |---|---|---|
-| Feature-гілка | `feature/TICKET-короткий-опис` | `feature/CASINO-456-bulk-update` |
-| Hotfix-гілка | `hotfix/x.y.z` (версія, яку готує) | `hotfix/1.4.1` |
-| Тег | SemVer `vX.Y.Z` | `v1.4.0`, `v1.4.1` |
+| Working branch | `<type>/<description>` (free-form name) | `feature/add-endpoint` |
+| Working branch types | `feature`, `bugfix`, `chore`, `refactor`, `docs`, `spike` | `bugfix/config-validation` |
+| Hotfix branch | `hotfix/x.y.z` (version it prepares) | `hotfix/1.4.1` |
+| Tag | SemVer `vX.Y.Z` | `v1.4.0`, `v1.4.1` |
 
-## 3. Звичайний release-потік
+## 3. Normal release flow
 
 ```bash
 git checkout main
 git pull
-# тег створюється ТІЛЬКИ через CI workflow (див. п.5), не руками
+# the tag is created ONLY via the CI workflow (see §5), never by hand
 ```
 
-## 4. Hotfix-потік (детально)
+## 4. Hotfix flow (detailed)
 
-Принцип: **фікс спочатку йде через звичайний PR у `main`** (review, CI), і лише потім **cherry-pick готового squash-коміту** в hotfix-гілку. Це безпечніше, ніж "hotfix спочатку, forward-port пізніше" — якщо забути крок, нічого не задеплоїться (явний фейл), а не тихо повернеться баг пізніше (тихий фейл).
+Principle: **the fix first goes through a normal PR into `main`** (review, CI), and only then is the
+**finished squash commit cherry-picked** into the hotfix branch. This is safer than "hotfix first,
+forward-port later" — if you forget the step, nothing gets deployed (an explicit failure) rather than the
+bug silently coming back later (a silent failure).
 
 ```bash
-# 1. Фікс через звичайний PR у main (squash merge)
+# 1. Fix via a normal PR into main (squash merge)
 git checkout main
-git checkout -b fix/CASINO-789-wallet-rollback
+git checkout -b bugfix/wallet-rollback
 git commit -m "fix: wallet balance rollback on timeout"
-# PR → squash merge у main
+# PR → squash merge into main
 
-# 2. Cherry-pick squash-коміту в hotfix-гілку
-git checkout -b hotfix/1.4.1 v1.4.0   # якщо ще не існує
-git cherry-pick <sha-зі-squash-merge-в-main>
+# 2. Cherry-pick the squash commit into the hotfix branch
+git checkout -b hotfix/1.4.1 v1.4.0   # if it doesn't exist yet
+git cherry-pick <sha-of-squash-merge-in-main>
 git push origin hotfix/1.4.1
-# далі тег створюється через CI workflow (п.5), з гілки hotfix/1.4.1
+# then the tag is created via the CI workflow (§5), from the hotfix/1.4.1 branch
 ```
 
 ```
@@ -58,52 +63,59 @@ hotfix/1.4.1    ●─────────┴──●
                 tag: v1.4.1   tag: v1.4.2
 ```
 
-Якщо потрібен ще один патч на ту саму прод-версію — продовжуєш ту саму hotfix-гілку, повторюючи cherry-pick.
+If another patch is needed on the same prod version — continue the same hotfix branch, repeating the cherry-pick.
 
 ## 5. CI/CD (GitHub Actions)
 
-### 5.1 `ci.yml` — build + тести на кожен коміт
+### 5.1 `ci.yml` — build + tests
 
-Тригериться на `push` у `main` та `hotfix/**`.
+Triggered on PRs to `main` and on `push` to `main` / `hotfix/**`. The job is named `build-and-test`
+(required by the `main` ruleset).
 
 ```yaml
 name: CI
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches:
       - main
-      - 'hotfix/**'
+      - "hotfix/**"
+
+permissions:
+  contents: read
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'gradle'
+          go-version: "1.26"
 
-      - name: Build and run tests (Gradle)
-        run: ./gradlew build
+      - name: gofmt
+        run: |
+          out="$(gofmt -l . | grep -v '^vendor/' || true)"
+          if [ -n "$out" ]; then echo "Unformatted files:"; echo "$out"; exit 1; fi
 
-      - name: Publish test report
-        if: always()
-        uses: dorny/test-reporter@v1
-        with:
-          name: Test Results
-          path: '**/build/test-results/test/*.xml'
-          reporter: java-junit
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test ./...
+
+      - name: go build
+        run: go build ./...
 ```
 
-### 5.2 `create-release-tag.yml` — єдиний легітимний спосіб створити тег
+### 5.2 `create-release-tag.yml` — the only legitimate way to create a tag
 
-Manual trigger (`workflow_dispatch`), перевіряє, що запущено з `main` або `hotfix/*`, пушить тег через **deploy key** (а не `GITHUB_TOKEN` — той не підтримується ruleset bypass list).
+Manual trigger (`workflow_dispatch`), verifies the run is from `main` or `hotfix/*`, and pushes the tag via a
+**deploy key** (not `GITHUB_TOKEN` — that one is not supported in the ruleset bypass list).
 
 ```yaml
 name: Create Release Tag
@@ -112,7 +124,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Версія тегу (наприклад v1.4.0)'
+        description: 'Tag version (e.g. v1.4.0)'
         required: true
         type: string
 
@@ -136,7 +148,7 @@ jobs:
           elif [[ "$REF_NAME" =~ ^hotfix/ ]]; then
             echo "OK: hotfix branch ($REF_NAME)"
           else
-            echo "::error::Тег можна створювати тільки з main або hotfix/*. Поточна гілка: $REF_NAME"
+            echo "::error::Tags may only be created from main or hotfix/*. Current branch: $REF_NAME"
             exit 1
           fi
 
@@ -144,7 +156,7 @@ jobs:
         run: |
           VERSION="${{ inputs.version }}"
           if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Версія має бути у форматі vX.Y.Z, отримано: $VERSION"
+            echo "::error::Version must match vX.Y.Z, got: $VERSION"
             exit 1
           fi
 
@@ -152,7 +164,7 @@ jobs:
         run: |
           VERSION="${{ inputs.version }}"
           if git rev-parse "$VERSION" >/dev/null 2>&1; then
-            echo "::error::Тег $VERSION вже існує"
+            echo "::error::Tag $VERSION already exists"
             exit 1
           fi
 
@@ -172,18 +184,19 @@ jobs:
           git push origin "${{ inputs.version }}"
 ```
 
-**Налаштування deploy key** (одноразово):
+**Deploy key setup** (one-time):
 1. `ssh-keygen -t ed25519 -C "release-tag-bot" -f release_tag_key -N ""`
-2. **Settings → Deploy keys → Add deploy key** — публічний ключ, з галочкою **"Allow write access"**
-3. **Settings → Secrets and variables → Actions → New repository secret** — приватний ключ під назвою `RELEASE_TAG_DEPLOY_KEY`
+2. **Settings → Deploy keys → Add deploy key** — the public key, with **"Allow write access"** checked.
+3. **Settings → Secrets and variables → Actions → New repository secret** — the private key, named `RELEASE_TAG_DEPLOY_KEY`.
 
-⚠️ Bypass для deploy keys діє на **категорію** "будь-який deploy key з write-доступом", не на конкретний ключ. Тримати в репо лише один write deploy key — той, що для тегів.
+⚠️ The bypass for deploy keys applies to the **category** "any deploy key with write access", not a specific
+key. Keep only one write deploy key in the repo — the one used for tags.
 
 ## 6. GitHub Rulesets
 
 ### 6.1 Tag ruleset — `release-tags-protection`
 
-| Налаштування | Значення |
+| Setting | Value |
 |---|---|
 | Enforcement | Active |
 | Target tags | `v*` |
@@ -193,16 +206,17 @@ jobs:
 | Restrict deletions | ✅ |
 | Block force pushes | ✅ |
 
-Результат: створити тег `v*` можна тільки через `create-release-tag.yml` (єдиний шлях з write deploy key), пряме `git push --tags` людиною — відхиляється.
+Result: a `v*` tag can only be created via `create-release-tag.yml` (the only path with a write deploy key);
+a direct `git push --tags` by a human is rejected.
 
 ### 6.2 Branch ruleset — `main`
 
-| Налаштування | Значення |
+| Setting | Value |
 |---|---|
 | Target branches | Include default branch |
-| Bypass list | порожній |
-| Require a pull request before merging | ✅ (Required approvals: **0** — соло-проєкт, review не потрібен) |
-| Allowed merge methods | **Squash** тільки |
+| Bypass list | empty |
+| Require a pull request before merging | ✅ (Required approvals: **0** — solo project, no review needed) |
+| Allowed merge methods | **Squash** only |
 | Require status checks to pass | ✅ → `build-and-test` |
 | Require branches to be up to date before merging | ✅ |
 | Restrict deletions | ✅ |
@@ -210,34 +224,34 @@ jobs:
 
 ### 6.3 Branch ruleset — `hotfix/**`
 
-Мінімалістичний навмисно — основний CI-гейт тут дає `ci.yml` (push-тригер), а не ruleset.
+Intentionally minimal — the main CI gate here comes from `ci.yml` (push trigger), not the ruleset.
 
-| Налаштування | Значення |
+| Setting | Value |
 |---|---|
 | Target branches | Include by pattern: `hotfix/**` |
-| Bypass list | порожній |
+| Bypass list | empty |
 | Block force pushes | ✅ |
-| Все інше | ❌ вимкнено (немає PR-флоу в hotfix, фікс заходить прямим push/cherry-pick) |
+| Everything else | ❌ disabled (no PR flow in hotfix; the fix arrives via direct push/cherry-pick) |
 
-## 7. Repo-level налаштування (Settings → General → Pull Requests)
+## 7. Repo-level settings (Settings → General → Pull Requests)
 
 - ✅ Allow squash merging
 - ❌ Allow merge commits
 - ❌ Allow rebase merging
 - ✅ Automatically delete head branches
 
-## 8. Підсумкова схема захисту тегів
+## 8. Tag protection summary
 
 ```
-Людина з Write/Maintain/Admin
+Person with Write/Maintain/Admin
         │
-        ✗  git push origin v1.4.0  ──> ВІДХИЛЕНО ruleset'ом
+        ✗  git push origin v1.4.0  ──> REJECTED by the ruleset
         │
-        ✓  Запускає workflow_dispatch (create-release-tag.yml)
+        ✓  Runs workflow_dispatch (create-release-tag.yml)
               │
-        CI job: перевіряє гілку (main / hotfix/*)
+        CI job: verifies the branch (main / hotfix/*)
               │ ✓
-        CI job: пушить тег через deploy key
+        CI job: pushes the tag via the deploy key
               │
-        Ruleset: deploy key є в bypass list → push дозволено
+        Ruleset: the deploy key is in the bypass list → push allowed
 ```

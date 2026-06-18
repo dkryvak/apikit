@@ -1,12 +1,12 @@
 name: Create Release Tag
 
-# Єдиний легітимний спосіб створити тег v* (tag ruleset блокує ручний push).
-# Деталі та налаштування deploy key / rulesets — docs/release-flow-setup.md.
+# The only legitimate way to create a v* tag (the tag ruleset blocks manual pushes).
+# Deploy key / ruleset setup is documented in docs/release-flow-setup.md.
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Версія тегу (наприклад v1.4.0)"
+        description: "Tag version (e.g. v1.4.0)"
         required: true
         type: string
 
@@ -30,7 +30,7 @@ jobs:
           elif [[ "$REF_NAME" =~ ^hotfix/ ]]; then
             echo "OK: hotfix branch ($REF_NAME)"
           else
-            echo "::error::Тег можна створювати тільки з main або hotfix/*. Поточна гілка: $REF_NAME"
+            echo "::error::Tags may only be created from main or hotfix/*. Current branch: $REF_NAME"
             exit 1
           fi
 
@@ -38,7 +38,7 @@ jobs:
         run: |
           VERSION="${{ inputs.version }}"
           if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Версія має бути у форматі vX.Y.Z, отримано: $VERSION"
+            echo "::error::Version must match vX.Y.Z, got: $VERSION"
             exit 1
           fi
 
@@ -46,7 +46,7 @@ jobs:
         run: |
           VERSION="${{ inputs.version }}"
           if git rev-parse "$VERSION" >/dev/null 2>&1; then
-            echo "::error::Тег $VERSION вже існує"
+            echo "::error::Tag $VERSION already exists"
             exit 1
           fi
 

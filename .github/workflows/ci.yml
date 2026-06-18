@@ -1,7 +1,7 @@
 name: CI
 
-# Tag Flow (див. docs/release-flow-setup.md): CI на PR у main та push у main / hotfix/**.
-# Job навмисно зветься `build-and-test` — саме його вимагає branch ruleset для main.
+# Tag Flow (see docs/release-flow-setup.md): CI on PRs to main and pushes to main / hotfix/**.
+# The job is named `build-and-test` because the main branch ruleset requires that exact check.
 on:
   pull_request:
     branches: [main]
@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # На bootstrap-гілці (без коду) Go-кроки скіпаються → CI зелений.
+      # On the bootstrap branch (no code yet) the Go steps are skipped so CI stays green.
       - name: Check for Go module
         id: gomod
         run: |
