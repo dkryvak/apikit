@@ -1,17 +1,12 @@
-# --- build stage ---
-# Go 1.26: matches the `go 1.26.0` directive in go.mod (bumped when client-go
-# was added). Build is fully offline via the committed-to-context vendor/ dir.
-FROM golang:1.26 AS build
-WORKDIR /app
-
-COPY . .
-
-RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -mod=vendor -trimpath -ldflags="-s -w" -o /out/apikit ./cmd/apikit
-
-# --- runtime stage ---
+# Runtime-only image for the in-cluster apikit pod.
+# It packages a PREBUILT linux/amd64 binary at bin/apikit in the build context
+# (produced by the `build-and-test` job and downloaded as an artifact).
+# No Go build happens here — the binary is compiled once in CI, then shipped.
 FROM alpine:3.20
+
 RUN apk add --no-cache bash curl jq ca-certificates
 
-COPY --from=build /out/apikit /usr/local/bin/apikit
+COPY bin/apikit /usr/local/bin/apikit
+RUN chmod +x /usr/local/bin/apikit
 
 ENTRYPOINT ["/bin/bash"]
