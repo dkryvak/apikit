@@ -9,6 +9,7 @@ if ! go mod tidy -diff; then
   exit 1
 fi
 
-# Format check + compile (task build depends on the gofmt task), then tests.
-task build
+# Tests first; build the artifact last, only if everything passed.
+# (task build depends on the gofmt task, so formatting is checked during build.)
 task test
+task build
