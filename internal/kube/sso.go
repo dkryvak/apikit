@@ -21,10 +21,10 @@ func EnsureAWSSSO(ctx context.Context) error {
 
 	if _, err := exec.LookPath("aws"); err != nil {
 		return fmt.Errorf(
-			"AWS CLI not found on PATH.\n"+
-				"'apikit kube' needs the AWS CLI plus a configured SSO profile and cluster access (kubeconfig).\n"+
-				"  • Install the AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html\n"+
-				"  • 'apikit local' works without AWS.\n"+
+			"AWS CLI not found on PATH.\n" +
+				"'apikit kube' needs the AWS CLI plus a configured SSO profile and cluster access (kubeconfig).\n" +
+				"  • Install the AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html\n" +
+				"  • 'apikit local' works without AWS.\n" +
 				"  • If you manage AWS credentials another way, set APIKIT_SKIP_SSO=1 to skip this check",
 		)
 	}

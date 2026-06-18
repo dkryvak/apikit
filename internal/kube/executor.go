@@ -23,9 +23,9 @@ const (
 	jobName     = "apikit-job"
 	podLabel    = "app=apikit"
 	containerNm = "apikit"
-	podSleepSec = "1800"        // pod stays alive 30 min for reuse, then exits
-	jobMaxLife  = int64(1800)   // hard cap: Job is killed after 30 min no matter what
-	jobTTLSec   = int32(120)    // cleanup 2 min after the Job finishes
+	podSleepSec = "1800"      // pod stays alive 30 min for reuse, then exits
+	jobMaxLife  = int64(1800) // hard cap: Job is killed after 30 min no matter what
+	jobTTLSec   = int32(120)  // cleanup 2 min after the Job finishes
 	readyWait   = 90 * time.Second
 )
 
