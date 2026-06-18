@@ -1,7 +1,9 @@
 name: CI
 
-# Tag Flow (see docs/release-flow-setup.md): CI on PRs to main and pushes to main / hotfix/**.
-# The job is named `build-and-test` because the main branch ruleset requires that exact check.
+# Tag Flow (see docs/release-flow-setup.md):
+#   - PRs to main and pushes to main / hotfix/**  → build (the required check)
+#   - tag v*                                       → build, then publish the GHCR image
+# The `docker` job reuses the artifact from `build` (no duplicate build).
 on:
   pull_request:
     branches: [main]
@@ -9,42 +11,98 @@ on:
     branches:
       - main
       - "hotfix/**"
+    tags:
+      - "v*"
 
 permissions:
   contents: read
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so `git describe` works
 
-      # On the bootstrap branch (no code yet) the Go steps are skipped so CI stays green.
-      - name: Check for Go module
-        id: gomod
-        run: |
-          if [ -f go.mod ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; fi
-
-      - name: Set up Go
-        if: steps.gomod.outputs.present == 'true'
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: "1.26"
 
       - name: gofmt
-        if: steps.gomod.outputs.present == 'true'
         run: |
           out="$(gofmt -l . | grep -v '^vendor/' || true)"
           if [ -n "$out" ]; then echo "Unformatted files:"; echo "$out"; exit 1; fi
 
       - name: go vet
-        if: steps.gomod.outputs.present == 'true'
         run: go vet ./...
 
       - name: go test
-        if: steps.gomod.outputs.present == 'true'
         run: go test ./...
 
-      - name: go build
-        if: steps.gomod.outputs.present == 'true'
-        run: go build ./...
+      - name: Build binary (linux/amd64)
+        # Tunables come from repository Variables (Settings → Variables). Unset →
+        # the binary's built-in defaults apply. Change them in the UI, then tag —
+        # no code or workflow edits needed.
+        env:
+          POD_LIFETIME_SECONDS: ${{ vars.POD_LIFETIME_SECONDS }}
+          JOB_TTL_SECONDS: ${{ vars.JOB_TTL_SECONDS }}
+          POD_READY_TIMEOUT_SECONDS: ${{ vars.POD_READY_TIMEOUT_SECONDS }}
+        run: |
+          if [ "${{ startsWith(github.ref, 'refs/tags/v') }}" = "true" ]; then
+            VERSION="${{ github.ref_name }}"
+            IMAGE="ghcr.io/${{ github.repository }}:${{ github.ref_name }}"
+          else
+            VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo dev)"
+            IMAGE=""
+          fi
+          LD="-s -w -X apikit/internal/config.version=$VERSION"
+          [ -n "$IMAGE" ] && LD="$LD -X apikit/internal/config.image=$IMAGE"
+          [ -n "$POD_LIFETIME_SECONDS" ] && LD="$LD -X apikit/internal/config.podLifetimeSeconds=$POD_LIFETIME_SECONDS"
+          [ -n "$JOB_TTL_SECONDS" ] && LD="$LD -X apikit/internal/config.jobTTLSeconds=$JOB_TTL_SECONDS"
+          [ -n "$POD_READY_TIMEOUT_SECONDS" ] && LD="$LD -X apikit/internal/config.podReadyTimeoutSecs=$POD_READY_TIMEOUT_SECONDS"
+          mkdir -p bin
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="$LD" -o bin/apikit ./cmd/apikit
+
+      - name: Upload binary (release tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: apikit-binary
+          path: bin/apikit
+          if-no-files-found: error
+
+  docker:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: apikit-binary
+          path: bin
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ghcr.io/${{ github.repository }}:latest

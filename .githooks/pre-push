@@ -1,0 +1,15 @@
+#!/bin/sh
+# Fast local gate before pushing (mirrors CI). Bypass with `git push --no-verify`.
+set -e
+
+# go.mod/go.sum must be tidy — reports the diff and fails, but does NOT modify
+# files (mutating in a hook would leave uncommitted changes after you push).
+if ! go mod tidy -diff; then
+  echo "✗ go.mod/go.sum not tidy — run 'task tidy' and commit." >&2
+  exit 1
+fi
+
+# Tests first; build the artifact last, only if everything passed.
+# (task build depends on the gofmt task, so formatting is checked during build.)
+task test
+task build

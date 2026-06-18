@@ -7,7 +7,7 @@ import "fmt"
 // only `kube` execution consults it; `local` ignores it entirely.
 //
 // Note: the container image is intentionally NOT part of env — it is a fixed
-// constant (kube.Image), because the image MUST contain the apikit binary.
+// setting (config.image), because the image MUST contain the apikit binary.
 type Env struct {
 	Name      string `json:"name"`
 	Namespace string `json:"namespace"`

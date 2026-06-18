@@ -33,7 +33,7 @@ The squash commit title must follow this format (it ends up in main's history).
 ## Pull Request
 
 - PR title follows Conventional Commits; the description links the issue via `Closes #<issue>`.
-- Merge is **squash** only; the branch must be up to date with `main`; `build-and-test` must be green.
+- Merge is **squash** only; the branch must be up to date with `main`; `build` must be green.
 
 ## Release and hotfix
 

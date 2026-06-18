@@ -1,6 +1,7 @@
 package kube
 
 import (
+	"apikit/internal/config"
 	"context"
 	"fmt"
 	"os"
@@ -15,7 +16,7 @@ import (
 // Set APIKIT_SKIP_SSO=1 to skip the check entirely (e.g. when credentials are
 // managed some other way than SSO).
 func EnsureAWSSSO(ctx context.Context) error {
-	if os.Getenv("APIKIT_SKIP_SSO") != "" {
+	if config.SkipSSO() {
 		return nil
 	}
 

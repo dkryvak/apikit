@@ -1,9 +1,11 @@
 package kube
 
 import (
+	"apikit/internal/config"
 	"bytes"
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,10 +25,6 @@ const (
 	jobName     = "apikit-job"
 	podLabel    = "app=apikit"
 	containerNm = "apikit"
-	podSleepSec = "1800"      // pod stays alive 30 min for reuse, then exits
-	jobMaxLife  = int64(1800) // hard cap: Job is killed after 30 min no matter what
-	jobTTLSec   = int32(120)  // cleanup 2 min after the Job finishes
-	readyWait   = 90 * time.Second
 )
 
 // Executor runs commands inside an apikit pod in a given namespace/cluster.
@@ -70,7 +68,7 @@ func (e *Executor) EnsurePod(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to create apikit job: %w", err)
 	}
 
-	return e.waitForReadyPod(ctx, readyWait)
+	return e.waitForReadyPod(ctx, time.Duration(config.PodReadyTimeoutSeconds())*time.Second)
 }
 
 func (e *Executor) findReadyPod(ctx context.Context) (string, bool) {
@@ -92,9 +90,15 @@ func (e *Executor) findReadyPod(ctx context.Context) (string, bool) {
 }
 
 func (e *Executor) createJob(ctx context.Context) error {
+	img, err := config.Image()
+	if err != nil {
+		return err
+	}
+
+	lifetime := config.PodLifetimeSeconds()
 	backoff := int32(0)
-	ttl := jobTTLSec
-	maxLife := jobMaxLife
+	ttl := int32(config.JobTTLSeconds())
+	maxLife := int64(lifetime)
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{Name: jobName, Namespace: e.namespace},
 		Spec: batchv1.JobSpec{
@@ -107,9 +111,9 @@ func (e *Executor) createJob(ctx context.Context) error {
 					RestartPolicy: corev1.RestartPolicyNever,
 					Containers: []corev1.Container{{
 						Name:    containerNm,
-						Image:   Image,
+						Image:   img,
 						Command: []string{"sleep"},
-						Args:    []string{podSleepSec},
+						Args:    []string{strconv.Itoa(lifetime)},
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("250m"),
@@ -126,7 +130,7 @@ func (e *Executor) createJob(ctx context.Context) error {
 		},
 	}
 
-	_, err := e.clientset.BatchV1().Jobs(e.namespace).Create(ctx, job, metav1.CreateOptions{})
+	_, err = e.clientset.BatchV1().Jobs(e.namespace).Create(ctx, job, metav1.CreateOptions{})
 	return err
 }
 
