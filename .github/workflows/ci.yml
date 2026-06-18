@@ -1,0 +1,50 @@
+name: CI
+
+# Tag Flow (див. docs/release-flow-setup.md): CI на PR у main та push у main / hotfix/**.
+# Job навмисно зветься `build-and-test` — саме його вимагає branch ruleset для main.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - main
+      - "hotfix/**"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # На bootstrap-гілці (без коду) Go-кроки скіпаються → CI зелений.
+      - name: Check for Go module
+        id: gomod
+        run: |
+          if [ -f go.mod ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Set up Go
+        if: steps.gomod.outputs.present == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: gofmt
+        if: steps.gomod.outputs.present == 'true'
+        run: |
+          out="$(gofmt -l . | grep -v '^vendor/' || true)"
+          if [ -n "$out" ]; then echo "Unformatted files:"; echo "$out"; exit 1; fi
+
+      - name: go vet
+        if: steps.gomod.outputs.present == 'true'
+        run: go vet ./...
+
+      - name: go test
+        if: steps.gomod.outputs.present == 'true'
+        run: go test ./...
+
+      - name: go build
+        if: steps.gomod.outputs.present == 'true'
+        run: go build ./...
