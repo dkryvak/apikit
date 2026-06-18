@@ -69,8 +69,8 @@ If another patch is needed on the same prod version — continue the same hotfix
 
 ### 5.1 `ci.yml` — build + tests
 
-Triggered on PRs to `main` and on `push` to `main` / `hotfix/**`. The job is named `build-and-test`
-(required by the `main` ruleset).
+Triggered on PRs to `main` and on `push` to `main` / `hotfix/**`. The job is named `build`
+(required by the `main` ruleset). On a tag it also publishes the GHCR image via a `docker` job.
 
 ```yaml
 name: CI
@@ -87,7 +87,7 @@ permissions:
   contents: read
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -217,7 +217,7 @@ a direct `git push --tags` by a human is rejected.
 | Bypass list | empty |
 | Require a pull request before merging | ✅ (Required approvals: **0** — solo project, no review needed) |
 | Allowed merge methods | **Squash** only |
-| Require status checks to pass | ✅ → `build-and-test` |
+| Require status checks to pass | ✅ → `build` |
 | Require branches to be up to date before merging | ✅ |
 | Restrict deletions | ✅ |
 | Block force pushes | ✅ |
