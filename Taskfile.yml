@@ -1,23 +1,44 @@
 version: "3"
 
+dotenv: [".env"]
+
 vars:
   APP: apikit
-  DOCKER_REPO: dkryvak/apikit
-  TAG: '{{default "latest" .TAG}}'
 
 tasks:
-  build:
-    desc: "Compile the CLI binary into ./bin directory"
+  gofmt:
+    desc: "Check formatting; fails on unformatted files (same as the CI gofmt step)"
     cmds:
-      - mkdir -p bin
-      - CGO_ENABLED=0 go build -o ./bin/{{.APP}} ./cmd/{{.APP}}
+      - |
+        out="$(gofmt -l . | grep -v '^vendor/' || true)"
+        if [ -n "$out" ]; then echo "Unformatted files:"; echo "$out"; exit 1; fi
+
+  tidy:
+    desc: "Sync go.mod/go.sum and refresh vendor (run when imports change)"
+    cmds:
+      - go mod tidy
       - go mod vendor
 
-  install:
-    desc: "Install CLI using 'go install' and generate Zsh completion"
-    deps: [ build ]
+  build:
+    desc: "Compile the CLI binary into ./bin (version from git describe, image tag from .env TAG)"
+    deps: [gofmt]
     cmds:
-      - cmd: go install {{.TASKFILE_DIR}}/cmd/{{.APP}}
+      - mkdir -p bin
+      - |
+        VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo dev)"
+        LDFLAGS="-s -w"
+        LDFLAGS="$LDFLAGS -X apikit/internal/config.version=$VERSION"
+        LDFLAGS="$LDFLAGS -X apikit/internal/config.image=ghcr.io/dkryvak/apikit:$TAG"
+        LDFLAGS="$LDFLAGS -X apikit/internal/config.podLifetimeSeconds=$POD_LIFETIME_SECONDS"
+        LDFLAGS="$LDFLAGS -X apikit/internal/config.jobTTLSeconds=$JOB_TTL_SECONDS"
+        LDFLAGS="$LDFLAGS -X apikit/internal/config.podReadyTimeoutSecs=$POD_READY_TIMEOUT_SECONDS"
+        CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o ./bin/{{.APP}} ./cmd/{{.APP}}
+
+  install:
+    desc: "Install the built binary into ~/go/bin and set up Zsh completion"
+    deps: [build]
+    cmds:
+      - install -m 0755 ./bin/{{.APP}} "$HOME/go/bin/{{.APP}}"
       - task: completion
 
   completion:
@@ -32,15 +53,3 @@ tasks:
     desc: "Remove build artifacts (bin, dist)"
     cmds:
       - rm -rf bin dist
-
-  docker:build:
-    desc: "Build Docker image {{.DOCKER_REPO}}:{{.TAG}} (and also tag as :latest if TAG != latest)"
-    deps: [ build ]
-    cmds:
-      - docker build --platform=linux/amd64 -t {{.DOCKER_REPO}}:{{.TAG}} .
-
-  docker:push:
-    desc: "Push Docker image {{.DOCKER_REPO}}:{{.TAG}} (and also push :latest if TAG != latest)"
-    deps: [ docker:build ]
-    cmds:
-      - docker push {{.DOCKER_REPO}}:{{.TAG}}
