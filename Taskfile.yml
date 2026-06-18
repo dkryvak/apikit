@@ -13,11 +13,22 @@ tasks:
         out="$(gofmt -l . | grep -v '^vendor/' || true)"
         if [ -n "$out" ]; then echo "Unformatted files:"; echo "$out"; exit 1; fi
 
+  test:
+    desc: "Run unit tests"
+    cmds:
+      - go test ./...
+
   tidy:
     desc: "Sync go.mod/go.sum and refresh vendor (run when imports change)"
     cmds:
       - go mod tidy
       - go mod vendor
+
+  hooks:
+    desc: "Install git hooks (run once per clone): pre-push runs tidy check + build"
+    cmds:
+      - git config core.hooksPath .githooks
+      - chmod +x .githooks/*
 
   build:
     desc: "Compile the CLI binary into ./bin (version from git describe, image tag from .env TAG)"
