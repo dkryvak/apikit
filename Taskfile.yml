@@ -1,0 +1,46 @@
+version: "3"
+
+vars:
+  APP: apikit
+  DOCKER_REPO: dkryvak/apikit
+  TAG: '{{default "latest" .TAG}}'
+
+tasks:
+  build:
+    desc: "Compile the CLI binary into ./bin directory"
+    cmds:
+      - mkdir -p bin
+      - CGO_ENABLED=0 go build -o ./bin/{{.APP}} ./cmd/{{.APP}}
+      - go mod vendor
+
+  install:
+    desc: "Install CLI using 'go install' and generate Zsh completion"
+    deps: [ build ]
+    cmds:
+      - cmd: go install {{.TASKFILE_DIR}}/cmd/{{.APP}}
+      - task: completion
+
+  completion:
+    desc: "Generate and register Zsh shell autocompletion"
+    cmds:
+      - mkdir -p ~/.zfunc
+      - $HOME/go/bin/{{.APP}} completion zsh > ~/.zfunc/_{{.APP}}
+      - echo 'fpath=(~/.zfunc $fpath)' >> ~/.zshrc || true
+      - echo 'autoload -Uz compinit && compinit' >> ~/.zshrc || true
+
+  clean:
+    desc: "Remove build artifacts (bin, dist)"
+    cmds:
+      - rm -rf bin dist
+
+  docker:build:
+    desc: "Build Docker image {{.DOCKER_REPO}}:{{.TAG}} (and also tag as :latest if TAG != latest)"
+    deps: [ build ]
+    cmds:
+      - docker build --platform=linux/amd64 -t {{.DOCKER_REPO}}:{{.TAG}} .
+
+  docker:push:
+    desc: "Push Docker image {{.DOCKER_REPO}}:{{.TAG}} (and also push :latest if TAG != latest)"
+    deps: [ docker:build ]
+    cmds:
+      - docker push {{.DOCKER_REPO}}:{{.TAG}}
