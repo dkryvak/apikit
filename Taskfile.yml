@@ -35,6 +35,7 @@ tasks:
     deps: [gofmt]
     cmds:
       - mkdir -p bin
+      - go mod vendor   # refresh vendor before building — same step as ci.yml + GoReleaser
       - |
         VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo dev)"
         LDFLAGS="-s -w"
@@ -43,7 +44,7 @@ tasks:
         LDFLAGS="$LDFLAGS -X apikit/internal/config.podLifetimeSeconds=$POD_LIFETIME_SECONDS"
         LDFLAGS="$LDFLAGS -X apikit/internal/config.jobTTLSeconds=$JOB_TTL_SECONDS"
         LDFLAGS="$LDFLAGS -X apikit/internal/config.podReadyTimeoutSecs=$POD_READY_TIMEOUT_SECONDS"
-        CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o ./bin/{{.APP}} ./cmd/{{.APP}}
+        CGO_ENABLED=0 go build -trimpath -mod=vendor -ldflags="$LDFLAGS" -o ./bin/{{.APP}} ./cmd/{{.APP}}
 
   install:
     desc: "Install the built binary into ~/go/bin and set up Zsh completion"

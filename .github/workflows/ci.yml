@@ -31,6 +31,12 @@ jobs:
         with:
           go-version: "1.26"
 
+      # Refresh the vendor tree so every go command below (vet, test, build) runs
+      # against a vendor/modules.txt consistent with go.mod. Same step the release
+      # job and the Taskfile run before building — one build format everywhere.
+      - name: Refresh vendor
+        run: go mod vendor
+
       - name: gofmt
         run: |
           out="$(gofmt -l . | grep -v '^vendor/' || true)"
@@ -64,7 +70,7 @@ jobs:
           [ -n "$JOB_TTL_SECONDS" ] && LD="$LD -X apikit/internal/config.jobTTLSeconds=$JOB_TTL_SECONDS"
           [ -n "$POD_READY_TIMEOUT_SECONDS" ] && LD="$LD -X apikit/internal/config.podReadyTimeoutSecs=$POD_READY_TIMEOUT_SECONDS"
           mkdir -p bin
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="$LD" -o bin/apikit ./cmd/apikit
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -mod=vendor -ldflags="$LD" -o bin/apikit ./cmd/apikit
 
       - name: Upload binary (release tags only)
         if: startsWith(github.ref, 'refs/tags/v')
