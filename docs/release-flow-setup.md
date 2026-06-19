@@ -192,6 +192,55 @@ jobs:
 ⚠️ The bypass for deploy keys applies to the **category** "any deploy key with write access", not a specific
 key. Keep only one write deploy key in the repo — the one used for tags.
 
+### 5.3 GoReleaser — cross-platform binaries + GitHub Release
+
+On a `v*` tag, `ci.yml` runs a `release` job (GoReleaser) **alongside** `docker`. Division of labor:
+
+| Job | Produces |
+|---|---|
+| `docker` | The in-cluster pod image (`ghcr.io/dkryvak/apikit:<tag>` + `:latest`), from the `build` artifact |
+| `release` | Downloadable binaries, `checksums.txt`, and the GitHub Release with an auto-generated changelog |
+
+`release` is independent of `build` — GoReleaser does its own cross-compilation (it doesn't reuse the
+linux/amd64 artifact). Config lives in [`.goreleaser.yaml`](../.goreleaser.yaml):
+
+- **Platforms:** darwin (arm64+amd64), linux (arm64+amd64), windows (amd64).
+- **ldflags:** the same build-time config as the `build` job — `config.version` = the tag, `config.image` =
+  `ghcr.io/dkryvak/apikit:<tag>`, and `POD_*` from repo Variables (unset → the binary's built-in defaults).
+- **Changelog:** generated from Conventional Commits since the previous tag (grouped into Features / Bug
+  fixes / Performance; `docs`/`test`/`chore`/`ci`/`build`/`style`/`refactor` excluded).
+- **Output:** per-platform archives (`tar.gz`, `zip` for Windows) + `checksums.txt`, attached to the Release.
+
+```yaml
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          POD_LIFETIME_SECONDS: ${{ vars.POD_LIFETIME_SECONDS }}
+          JOB_TTL_SECONDS: ${{ vars.JOB_TTL_SECONDS }}
+          POD_READY_TIMEOUT_SECONDS: ${{ vars.POD_READY_TIMEOUT_SECONDS }}
+```
+
+The default `GITHUB_TOKEN` (with `contents: write`) is enough — no extra secret. Validate the config
+locally before tagging with `task release-check`, and dry-run the full build with `task release-snapshot`
+(output in `./dist`, nothing published).
+
 ## 6. GitHub Rulesets
 
 ### 6.1 Tag ruleset — `release-tags-protection`

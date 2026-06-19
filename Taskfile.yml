@@ -60,6 +60,16 @@ tasks:
       - echo 'fpath=(~/.zfunc $fpath)' >> ~/.zshrc || true
       - echo 'autoload -Uz compinit && compinit' >> ~/.zshrc || true
 
+  release-check:
+    desc: "Validate .goreleaser.yaml (requires goreleaser installed)"
+    cmds:
+      - goreleaser check
+
+  release-snapshot:
+    desc: "Build all release artifacts locally into ./dist without publishing"
+    cmds:
+      - goreleaser release --snapshot --clean
+
   clean:
     desc: "Remove build artifacts (bin, dist)"
     cmds:
