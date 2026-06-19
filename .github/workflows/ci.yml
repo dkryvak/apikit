@@ -105,6 +105,12 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
+          # Disable the buildx provenance/SBOM attestations: they wrap the image
+          # in an OCI index and leave untagged manifest entries in the GHCR
+          # package. A single-platform image with attestations off pushes a
+          # clean, fully-tagged manifest.
+          provenance: false
+          sbom: false
           tags: |
             ghcr.io/${{ github.repository }}:${{ github.ref_name }}
             ghcr.io/${{ github.repository }}:latest
