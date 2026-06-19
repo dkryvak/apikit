@@ -16,13 +16,56 @@ curl -fsSL https://raw.githubusercontent.com/dkryvak/apikit/main/install.sh | sh
 irm https://raw.githubusercontent.com/dkryvak/apikit/main/install.ps1 | iex
 ```
 
-The script detects the OS/arch, downloads the binary from [GitHub Releases](https://github.com/dkryvak/apikit/releases),
-and puts it on PATH (on macOS it also clears the Gatekeeper quarantine). For manual installation, download the
-archive from the Releases page.
+The installer detects your OS/arch, downloads the matching archive from
+[GitHub Releases](https://github.com/dkryvak/apikit/releases), **verifies its SHA-256 against the release's
+`checksums.txt`**, and puts `apikit` on PATH (on macOS it also clears the Gatekeeper quarantine flag). Verify:
 
 ```sh
 apikit --version
 ```
+
+#### Options
+
+Both scripts take the same settings via a flag or an environment variable:
+
+| Setting | macOS / Linux | Windows | Default |
+|---|---|---|---|
+| Version | `-v v0.2.0` / `APIKIT_VERSION` | `-Version v0.2.0` / `$env:APIKIT_VERSION` | latest release |
+| Install dir | `-d DIR` / `APIKIT_INSTALL_DIR` | `-InstallDir DIR` / `$env:APIKIT_INSTALL_DIR` | `/usr/local/bin`, else `~/.local/bin` (Unix) · `%LOCALAPPDATA%\apikit\bin` (Windows) |
+
+Pin a version and/or directory — download the script first when passing flags:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/dkryvak/apikit/main/install.sh -o install.sh
+sh install.sh -v v0.2.0 -d ~/bin
+```
+```powershell
+irm https://raw.githubusercontent.com/dkryvak/apikit/main/install.ps1 -OutFile install.ps1
+.\install.ps1 -Version v0.2.0 -InstallDir C:\tools\apikit
+```
+
+…or pass the version through the pipe with an environment variable:
+
+```sh
+APIKIT_VERSION=v0.2.0 sh -c "$(curl -fsSL https://raw.githubusercontent.com/dkryvak/apikit/main/install.sh)"
+```
+
+### Manual install
+
+Download the archive for your platform from the
+[Releases page](https://github.com/dkryvak/apikit/releases) — assets are named
+`apikit_<version>_<os>_<arch>.tar.gz` (`.zip` for Windows) — then verify the checksum and extract:
+
+```sh
+# verify against checksums.txt from the same release
+shasum -a 256 apikit_0.2.0_darwin_arm64.tar.gz
+grep apikit_0.2.0_darwin_arm64.tar.gz checksums.txt
+
+tar -xzf apikit_0.2.0_darwin_arm64.tar.gz
+sudo install -m 0755 apikit /usr/local/bin/
+```
+
+On Windows, unzip the archive and move `apikit.exe` to a directory on your `PATH`.
 
 ## Prerequisites
 
