@@ -1,0 +1,99 @@
+# GoReleaser config — cross-platform binaries + GitHub Release on each v* tag.
+# See docs/release-flow-setup.md §5.3. The pod image (GHCR) is still built by the
+# `docker` job in ci.yml; GoReleaser handles ONLY the downloadable binaries and
+# the GitHub Release (binaries, checksums, changelog).
+#
+# Local checks (no tag needed):
+#   task release-check       # goreleaser check
+#   task release-snapshot    # full build into ./dist without publishing
+version: 2
+
+project_name: apikit
+
+builds:
+  - id: apikit
+    main: ./cmd/apikit
+    binary: apikit
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      # No Windows/arm64 build (per issue scope: windows amd64 only).
+      - goos: windows
+        goarch: arm64
+    flags:
+      - -trimpath
+      - -mod=vendor
+    # Same build-time config the Taskfile / ci.yml bake in. POD_* come from the
+    # release job env (repo Variables); `index .Env` yields "" when unset, so the
+    # binary's built-in defaults apply (matches the ci.yml build job behavior).
+    ldflags:
+      - -s -w
+      - -X apikit/internal/config.version={{ .Tag }}
+      - -X apikit/internal/config.image=ghcr.io/dkryvak/apikit:{{ .Tag }}
+      - -X apikit/internal/config.podLifetimeSeconds={{ index .Env "POD_LIFETIME_SECONDS" }}
+      - -X apikit/internal/config.jobTTLSeconds={{ index .Env "JOB_TTL_SECONDS" }}
+      - -X apikit/internal/config.podReadyTimeoutSecs={{ index .Env "POD_READY_TIMEOUT_SECONDS" }}
+
+archives:
+  - id: apikit
+    ids:
+      - apikit
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - README.md
+      - LICENSE*
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  use: github
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Bug fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Performance
+      regexp: '^.*?perf(\(.+\))??!?:.+$'
+      order: 2
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:'
+      - '^build:'
+      - '^style:'
+      - '^refactor:'
+      - 'Merge pull request'
+      - 'Merge branch'
+
+release:
+  github:
+    owner: dkryvak
+    name: apikit
+  draft: false
+  prerelease: auto
+  name_template: "{{ .Tag }}"
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
