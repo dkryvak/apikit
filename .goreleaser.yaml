@@ -10,6 +10,14 @@ version: 2
 
 project_name: apikit
 
+# Refresh the vendor tree before building. Every build path (the ci.yml `build`
+# job, the Taskfile, and this config) runs `go mod vendor` before `go build` so
+# the -mod=vendor builds are always consistent with go.mod and never trip on a
+# stale vendor/modules.txt. The release runner has network, so this resolves fine.
+before:
+  hooks:
+    - go mod vendor
+
 builds:
   - id: apikit
     main: ./cmd/apikit
