@@ -91,7 +91,6 @@ changelog:
       - '^ci:'
       - '^build:'
       - '^style:'
-      - '^refactor:'
       - 'Merge pull request'
       - 'Merge branch'
 
@@ -102,6 +101,51 @@ release:
   draft: false
   prerelease: auto
   name_template: "{{ .Tag }}"
+  # Release-notes template. GoReleaser renders: header → grouped changelog
+  # (Features / Bug fixes / Performance / Others, see `changelog` above) → footer.
+  # Both are Go templates (fields: .Tag, .Version, .ProjectName, .PreviousTag,
+  # .Date). The editorial changelog is fully auto-generated from Conventional
+  # Commits — only the static wrapper below is maintained by hand. The header is
+  # worded to read fine even when the changelog is empty (a release with only
+  # docs/chore/ci/build/test/style commits).
+  header: |
+    ## What's Changed
+
+    `{{ .ProjectName }} {{ .Tag }}` — grouped changes below (if any). Cross-platform
+    binaries, `checksums.txt`, and the pod image are attached as assets.
+    _Changes since `{{ .PreviousTag }}`._
+  footer: |
+    ## Install
+
+    **macOS / Linux:**
+
+    ```sh
+    curl -fsSL https://raw.githubusercontent.com/dkryvak/apikit/main/install.sh | sh
+    ```
+
+    **Windows (PowerShell):**
+
+    ```powershell
+    irm https://raw.githubusercontent.com/dkryvak/apikit/main/install.ps1 | iex
+    ```
+
+    The installers detect OS/arch, verify the checksum, and set up PATH. To pin a
+    version or use a custom install directory, see the
+    [README](https://github.com/dkryvak/apikit/blob/main/README.md#install).
+
+    **Docker (in-cluster pod image):**
+
+    ```sh
+    docker pull ghcr.io/dkryvak/apikit:{{ .Tag }}
+    ```
+
+    ## Verify
+
+    Each archive's SHA-256 is listed in `checksums.txt`. Verify a download with:
+
+    ```sh
+    sha256sum --ignore-missing -c checksums.txt
+    ```
 
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
