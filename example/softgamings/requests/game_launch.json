@@ -1,0 +1,11 @@
+{
+  "Login": "550e8400-e29b-41d4-a716-446655440000",
+  "Password": "550e8400-e29b-41d4-a716-446655440001",
+  "Currency": "USD",
+  "ExtParam": "550e8400-e29b-41d4-a716-446655440002",
+  "System": "789",
+  "Page": "123",
+  "UserAutoCreate": 1,
+  "IsMobile": 0,
+  "UserIP": "192.168.1.1"
+}

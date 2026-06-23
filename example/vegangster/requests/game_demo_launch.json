@@ -1,0 +1,9 @@
+{
+  "game_code": "bgaming_lucky_streak",
+  "platform": "desktop",
+  "currency": "USD",
+  "lang": "en",
+  "country": "US",
+  "ip": "192.168.1.1",
+  "lobby_url": "https://example.com/lobby"
+}

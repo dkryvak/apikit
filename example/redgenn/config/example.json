@@ -1,0 +1,9 @@
+{
+  "env": "demo",
+  "apiHost": "https://api.redgenn.example.com",
+  "launchApiHost": "https://launch.redgenn.example.com",
+  "login": "your-admin-login",
+  "password": "your-admin-password",
+  "partnerCode": "your-partner-code",
+  "wlCode": "your-wl-code"
+}
