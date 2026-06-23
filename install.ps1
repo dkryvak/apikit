@@ -13,6 +13,9 @@
 .PARAMETER InstallDir
   Install directory. Default: %LOCALAPPDATA%\apikit\bin. (env: APIKIT_INSTALL_DIR)
 
+.PARAMETER NoModifyPath
+  Do not add the install directory to the user PATH. (env: APIKIT_NO_MODIFY_PATH)
+
 .EXAMPLE
   irm https://raw.githubusercontent.com/dkryvak/apikit/main/install.ps1 | iex
 
@@ -22,8 +25,12 @@
 [CmdletBinding()]
 param(
   [string]$Version = $env:APIKIT_VERSION,
-  [string]$InstallDir = $env:APIKIT_INSTALL_DIR
+  [string]$InstallDir = $env:APIKIT_INSTALL_DIR,
+  [switch]$NoModifyPath
 )
+
+# Allow opting out of the PATH edit via env var as well as the -NoModifyPath switch.
+if ($env:APIKIT_NO_MODIFY_PATH) { $NoModifyPath = $true }
 
 $ErrorActionPreference = 'Stop'
 $RepoOwner = 'dkryvak'
@@ -87,10 +94,17 @@ try {
   Info "installed $Bin $Version -> $dest"
 
   # --- user PATH -----------------------------------------------------------
-  $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-  if (($userPath -split ';') -notcontains $InstallDir) {
-    [Environment]::SetEnvironmentVariable('Path', "$userPath;$InstallDir", 'User')
-    Info "added $InstallDir to your user PATH (restart your shell to pick it up)"
+  if ($NoModifyPath) {
+    Info "skipping PATH update (-NoModifyPath); ensure $InstallDir is on your PATH"
+  } elseif (($env:Path -split ';') -notcontains $InstallDir) {
+    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    if (($userPath -split ';') -notcontains $InstallDir) {
+      # Guard an empty/null user PATH so we don't write a leading ';'.
+      if ([string]::IsNullOrEmpty($userPath)) { $newPath = $InstallDir }
+      else { $newPath = "$userPath;$InstallDir" }
+      [Environment]::SetEnvironmentVariable('Path', $newPath, 'User')
+      Info "added $InstallDir to your user PATH (restart your shell to pick it up)"
+    }
   }
 }
 finally {

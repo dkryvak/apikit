@@ -6,12 +6,13 @@
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/dkryvak/apikit/main/install.sh | sh
-#   ./install.sh [-v VERSION] [-d DIR]
+#   ./install.sh [-v VERSION] [-d DIR] [--no-modify-path]
 #
 # Options / environment:
-#   -v VERSION  | APIKIT_VERSION       release to install, e.g. v0.2.0 (default: latest)
-#   -d DIR      | APIKIT_INSTALL_DIR   install directory (default: /usr/local/bin if
-#                                      writable, else ~/.local/bin)
+#   -v VERSION       | APIKIT_VERSION         release to install (default: latest)
+#   -d DIR           | APIKIT_INSTALL_DIR     install dir (default: /usr/local/bin,
+#                                             via sudo when not writable)
+#   --no-modify-path | APIKIT_NO_MODIFY_PATH  do not edit shell rc files for PATH
 set -eu
 
 REPO_OWNER="dkryvak"
@@ -20,12 +21,14 @@ BIN="apikit"
 
 VERSION="${APIKIT_VERSION:-}"
 INSTALL_DIR="${APIKIT_INSTALL_DIR:-}"
+NO_MODIFY_PATH="${APIKIT_NO_MODIFY_PATH:-}"
 
 while [ $# -gt 0 ]; do
   case "$1" in
     -v) VERSION="$2"; shift 2 ;;
     -d) INSTALL_DIR="$2"; shift 2 ;;
-    -h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --no-modify-path) NO_MODIFY_PATH=1; shift ;;
+    -h|--help) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -76,10 +79,10 @@ ASSET="${BIN}_${VER_NUM}_${OS}_${ARCH}.tar.gz"
 BASE="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${VERSION}"
 
 # --- choose install dir ----------------------------------------------------
-if [ -z "$INSTALL_DIR" ]; then
-  if [ -w /usr/local/bin ] 2>/dev/null; then INSTALL_DIR="/usr/local/bin";
-  else INSTALL_DIR="${HOME}/.local/bin"; fi
-fi
+# Default to /usr/local/bin (already on PATH on macOS/Linux). When it isn't
+# writable, the install step below uses sudo instead of silently falling back to
+# a per-user dir. A custom dir is honored only via -d / APIKIT_INSTALL_DIR.
+if [ -z "$INSTALL_DIR" ]; then INSTALL_DIR="/usr/local/bin"; fi
 
 # --- download + verify -----------------------------------------------------
 TMP="$(mktemp -d)"
@@ -114,11 +117,48 @@ fi
 
 info "installed ${BIN} ${VERSION} -> ${dest}"
 
-# --- PATH hint -------------------------------------------------------------
-case ":${PATH}:" in
-  *":${INSTALL_DIR}:"*) ;;
-  *) info "note: ${INSTALL_DIR} is not in your PATH — add it, e.g.:"
-     echo "      export PATH=\"${INSTALL_DIR}:\$PATH\"" >&2 ;;
-esac
+# --- PATH setup ------------------------------------------------------------
+# If the install dir isn't on PATH (typically only with a custom -d), append an
+# idempotent export to the right rc file for the user's login shell. The block
+# is guarded at runtime so sourcing it twice can't duplicate the entry, and we
+# skip writing when an identical line already exists. Opt out: --no-modify-path.
+add_to_path() {
+  dir="$1"
+
+  # Already reachable — nothing to do.
+  case ":${PATH}:" in *":${dir}:"*) return 0 ;; esac
+
+  guard="case \":\$PATH:\" in *\":${dir}:\"*) ;; *) export PATH=\"${dir}:\$PATH\" ;; esac"
+
+  if [ -n "$NO_MODIFY_PATH" ]; then
+    info "${dir} is not on your PATH. Add it manually:"
+    echo "      export PATH=\"${dir}:\$PATH\"" >&2
+    return 0
+  fi
+
+  # rc file(s) to update, chosen by the login shell.
+  case "$(basename "${SHELL:-/bin/sh}")" in
+    zsh)  rcs="${ZDOTDIR:-$HOME}/.zshrc" ;;
+    bash) rcs="${HOME}/.bash_profile ${HOME}/.bashrc" ;;
+    *)    rcs="${HOME}/.profile" ;;
+  esac
+
+  updated=""
+  for rc in $rcs; do
+    [ -e "$rc" ] || : > "$rc"
+    if ! grep -qF "$guard" "$rc" 2>/dev/null; then
+      printf '\n# added by apikit installer\n%s\n' "$guard" >> "$rc"
+      updated="${updated} ${rc}"
+    fi
+  done
+
+  if [ -n "$updated" ]; then
+    info "added ${dir} to your PATH in:${updated}"
+    set -- $updated
+    info "restart your shell or run: source $1"
+  fi
+}
+
+add_to_path "$INSTALL_DIR"
 
 "$dest" --version 2>/dev/null || true
