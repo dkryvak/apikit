@@ -31,7 +31,20 @@ Both scripts take the same settings via a flag or an environment variable:
 | Setting | macOS / Linux | Windows | Default |
 |---|---|---|---|
 | Version | `-v v0.2.0` / `APIKIT_VERSION` | `-Version v0.2.0` / `$env:APIKIT_VERSION` | latest release |
-| Install dir | `-d DIR` / `APIKIT_INSTALL_DIR` | `-InstallDir DIR` / `$env:APIKIT_INSTALL_DIR` | `/usr/local/bin`, else `~/.local/bin` (Unix) · `%LOCALAPPDATA%\apikit\bin` (Windows) |
+| Install dir | `-d DIR` / `APIKIT_INSTALL_DIR` | `-InstallDir DIR` / `$env:APIKIT_INSTALL_DIR` | `/usr/local/bin` (Unix) · `%LOCALAPPDATA%\apikit\bin` (Windows) |
+| Skip PATH edit | `--no-modify-path` / `APIKIT_NO_MODIFY_PATH` | `-NoModifyPath` / `$env:APIKIT_NO_MODIFY_PATH` | off (PATH is updated when needed) |
+
+The default install dir differs by platform on purpose. On Unix it's
+`/usr/local/bin` — already on `PATH`, so no shell config is touched (the script
+uses `sudo` if the dir isn't writable). On Windows there's no equivalent
+system dir on `PATH` by default, so the installer uses a per-user dir
+(`%LOCALAPPDATA%\apikit\bin`) and registers it in the user `PATH`.
+
+When you point `-d` at a directory that isn't on `PATH` (e.g. `~/.local/bin`),
+the Unix installer appends an idempotent `export PATH=...` to the rc file for
+your login shell (`~/.zshrc`, `~/.bash_profile` + `~/.bashrc`, or `~/.profile`)
+and prints a `source` hint for the current session. Pass `--no-modify-path` to
+skip this and set `PATH` yourself.
 
 Pin a version and/or directory — download the script first when passing flags:
 
