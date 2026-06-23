@@ -1,0 +1,13 @@
+{
+  "player_id": "player123",
+  "token": "eyJhbGciOiJSUzI1NiJ9...",
+  "game_code": "bgaming_lucky_streak",
+  "platform": "desktop",
+  "currency": "USD",
+  "lang": "en",
+  "country": "US",
+  "ip": "192.168.1.1",
+  "lobby_url": "https://example.com/lobby",
+  "deposit_url": "https://example.com/deposit",
+  "player_nick": "Lucky Player"
+}

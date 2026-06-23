@@ -99,6 +99,10 @@ apikit kube  vegangster call game list --config <alias> --out games.json   # via
 Body/query — as a string or from stdin (`--body - < body.json`). Output: stdout (`--out -` or no `--out`) or
 a file (`--out f`); diagnostics go to stderr.
 
+Ready-to-use config and request examples for every module live in
+[`example/`](example/README.md) — pipe them straight in, e.g.
+`apikit redgenn config import demo - < example/redgenn/config/example.json`.
+
 ## Commands
 
 ```
@@ -112,6 +116,7 @@ Configs and envs are stored under `~/.apikit/`.
 
 ## Documentation
 
+- [`example/`](example/README.md) — import-ready config and request examples for every module.
 - [`docs/release-flow-setup.md`](docs/release-flow-setup.md) — git flow, releases, CI/CD.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to contribute.
 

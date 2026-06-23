@@ -1,0 +1,7 @@
+{
+  "env": "demo",
+  "apiHost": "https://api.softgamings.example.com",
+  "key": "your-key",
+  "pwd": "your-pwd",
+  "hmacSecret": "your-hmac-secret"
+}
