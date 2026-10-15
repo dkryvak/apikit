@@ -39,8 +39,8 @@ type FreegamesBetAmountsRequest struct {
 // /operator/v1/freegames/bet-amount/list
 
 type FreegamesBetAmountListRequest struct {
-	OperatorID string `json:"operator_id" validate:"required"`
-	BrandID    string `json:"brand_id" validate:"required"`
-	GameCodes  string `json:"game_codes,omitempty"`
-	Currencies string `json:"currencies,omitempty"`
+	OperatorID string   `json:"operator_id" validate:"required"`
+	BrandID    string   `json:"brand_id" validate:"required"`
+	GameCodes  []string `json:"game_codes,omitempty"`
+	Currencies []string `json:"currencies,omitempty"`
 }
