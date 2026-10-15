@@ -43,7 +43,7 @@ func newFreegamesCommand(module cmdkit.ModuleName) *cli.Command {
 				Action: middleware.WithMetadataAndConfig(module, config.New, handleFreegamesBetAmounts),
 			},
 			{
-				Name:   "bet-amounts",
+				Name:   "bet-amounts-list",
 				Usage:  "POST /operator/v1/freegames/bet-amount/list (list allowed bet amounts by games)",
 				Flags:  flags,
 				Action: middleware.WithMetadataAndConfig(module, config.New, handleFreegamesBetAmountList),
