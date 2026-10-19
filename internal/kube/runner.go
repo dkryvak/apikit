@@ -2,6 +2,7 @@ package kube
 
 import (
 	"apikit/internal/env"
+	cmdkit "apikit/internal/kit/command"
 	cfgkit "apikit/internal/kit/config"
 	"context"
 	"encoding/json"
@@ -73,7 +74,11 @@ func SelfRemote(ctx context.Context, command *cli.Command, module, alias string,
 		return err
 	}
 
-	return writeResult(command, stdout)
+	// Write the captured body through the same helper `local` uses, so `--out`
+	// behaves identically: "-" → stdout, a directory → generated filename,
+	// a file path → that file, empty → nothing (diagnostics already on stderr).
+	md := cmdkit.Metadata{Module: module, Alias: alias}
+	return cmdkit.WriteOutIfNeeded(stdout, outSuffix(), command, md, cmdkit.FileTypeJSON)
 }
 
 // readPayload returns the request body or query payload (resolving "-" from
@@ -134,16 +139,20 @@ func commandPath(raw []string) []string {
 	return path
 }
 
-// writeResult sends the captured raw body to the local --out target.
-func writeResult(command *cli.Command, body []byte) error {
-	out := strings.TrimSpace(command.String("out"))
-	if out == "" || out == "-" {
-		_, err := os.Stdout.Write(body)
-		return err
+// outSuffix derives the --out filename suffix from the command path — the
+// group/endpoint tokens after "call" — matching the local handlers' convention
+// (e.g. "freegames bet-amounts" → "freegames_bet_amounts").
+func outSuffix() string {
+	path := commandPath(os.Args[1:])
+	for i, p := range path {
+		if p == "call" {
+			path = path[i+1:]
+			break
+		}
 	}
-	if err := os.WriteFile(out, body, 0o644); err != nil {
-		return fmt.Errorf("failed to write %q: %w", out, err)
+	suffix := strings.ReplaceAll(strings.Join(path, "_"), "-", "_")
+	if suffix == "" {
+		suffix = "response"
 	}
-	fmt.Fprintf(os.Stderr, "✓ saved response to %s\n", out)
-	return nil
+	return suffix
 }
