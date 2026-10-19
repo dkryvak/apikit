@@ -1,3 +1,3 @@
 package console
 
-func PrintFreegamesBetLevelBodySchema() { renderDoc("freegames_bet_levels.md") }
+func PrintFreegamesBetAmountsBodySchema() { renderDoc("freegames_bet_amounts.md") }
