@@ -1,0 +1,5 @@
+query GetFreeSpinCurrencies($jurisdictionCode: String!, $gameId: Int!, $currencies: [String]) {
+    freeSpinsCurrencies(jurisdictionCode: $jurisdictionCode, gameId: $gameId, currencies: $currencies) {
+        results
+    }
+}

@@ -33,8 +33,9 @@ func NewCallCommand() *cli.Command {
 				Name:        "call",
 				Usage:       "Run an API request",
 				Description: "Use subcommands to call specific endpoints",
-				// Endpoints are added per GraphQL query (freegames bet-amounts: #27).
-				Commands: []*cli.Command{},
+				Commands: []*cli.Command{
+					newFreegamesCommand(Module),
+				},
 			},
 		},
 	}

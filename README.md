@@ -1,6 +1,7 @@
 # apikit
 
-CLI for signed HTTP requests to gaming aggregators (vegangster, softgamings, redgenn).
+CLI for requests to gaming aggregators (vegangster, softgamings, redgenn, alea).
+Most speak signed HTTP; **alea** speaks GraphQL.
 Aggregators accept requests only from the cluster's whitelisted IP, so `apikit` can run a call
 **inside a Kubernetes pod** (`kube`) or **directly from the machine** (`local`).
 
@@ -112,7 +113,34 @@ apikit kube  <module> call <group> <endpoint> --config <alias> [--body - | --out
 apikit local <module> call <group> <endpoint> --config <alias> [--body - | --out f]
 ```
 
+### Command contract
+
+Command paths are aggregator-neutral: the same `<group> <endpoint>` names the same
+operation across every aggregator — only the `<aggregator>` segment changes.
+Aggregator-specific request fields (and the underlying REST path or GraphQL query)
+live in `--body`, not in the command name.
+
 Configs and envs are stored under `~/.apikit/`.
+
+## Alea (GraphQL)
+
+Unlike the other aggregators, Alea is accessed over **GraphQL** — a single
+`POST /api/graphql` endpoint with a `{query, variables}` envelope and
+`Authorization: Bearer`, `Alea-CasinoId`, `Alea-EnvironmentId` headers. The CLI
+contract is unchanged: the command picks the GraphQL query, its variables come
+from `--body`, and `jurisdictionCode` is injected from `--config`.
+
+Config fields: `customerApiHost` (required), `launchApiHost` / `bonusApiHost`
+(optional), `environmentToken`, `secretKey`, `casinoId` (required),
+`environmentId` (optional), `jurisdictionCode` (required).
+
+```sh
+apikit alea config import prod - < config.json
+apikit local alea call freegames bet-amounts --config prod \
+  --body '{"gameId":15836,"currencies":["EUR","USD"]}'
+apikit kube  alea call freegames bet-amounts --config prod --body - < vars.json
+```
+
 
 ## Documentation
 
