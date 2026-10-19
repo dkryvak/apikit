@@ -1,6 +1,7 @@
 package app
 
 import (
+	alea "apikit/internal/alea/command"
 	env "apikit/internal/env/command"
 	"apikit/internal/meta"
 	redgenn "apikit/internal/redgenn/command"
@@ -22,6 +23,7 @@ func NewApp(version string) *cli.Command {
 			vegangster.NewConfigCommand(),
 			redgenn.NewConfigCommand(),
 			softgamings.NewConfigCommand(),
+			alea.NewConfigCommand(),
 			// Execution namespaces: the mode (kube|local) decides how calls run.
 			newKubeCommand(),
 			newLocalCommand(),
@@ -40,6 +42,7 @@ func newKubeCommand() *cli.Command {
 			vegangster.NewCallCommand(),
 			redgenn.NewCallCommand(),
 			softgamings.NewCallCommand(),
+			alea.NewCallCommand(),
 		},
 	}
 }
@@ -54,6 +57,7 @@ func newLocalCommand() *cli.Command {
 			vegangster.NewCallCommand(),
 			redgenn.NewCallCommand(),
 			softgamings.NewCallCommand(),
+			alea.NewCallCommand(),
 		},
 	}
 }
