@@ -2,7 +2,7 @@ package dto
 
 // /admservice
 
-type FreegamesBetLevelsRequest struct {
+type FreegamesBetAmountsRequest struct {
 	Login    string `json:"login" validate:"required"`
 	Password string `json:"password" validate:"required"`
 	Command  string `json:"cm" validate:"required"`

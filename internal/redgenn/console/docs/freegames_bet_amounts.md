@@ -1,4 +1,4 @@
-# Freegames: bet-levels request body
+# Freegames: bet-amounts request body
 
 Lists allowed bet amounts. Request body must be a JSON object.
 

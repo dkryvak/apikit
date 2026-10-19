@@ -24,20 +24,20 @@ func newFreegamesCommand(module cmdkit.ModuleName) *cli.Command {
 			"Some rewards may require interacting with the game before a free bet can be granted.",
 		Commands: []*cli.Command{
 			{
-				Name:   "bet-levels",
+				Name:   "bet-amounts",
 				Usage:  "POST /admservice (list allowed bet amounts)",
 				Flags:  flags,
-				Action: middleware.WithMetadataAndConfig(module, config.New, handleFreegamesBetLevel),
+				Action: middleware.WithMetadataAndConfig(module, config.New, handleFreegamesBetAmounts),
 			},
 		},
 	}
 }
 
-func handleFreegamesBetLevel(ctx context.Context, command *cli.Command, metadata cmdkit.Metadata, cfg *config.RedgennConfig) error {
+func handleFreegamesBetAmounts(ctx context.Context, command *cli.Command, metadata cmdkit.Metadata, cfg *config.RedgennConfig) error {
 	body, err := cmdkit.PrintSchemaOrParseBody(
 		command,
-		console.PrintFreegamesBetLevelBodySchema,
-		func(request *dto.FreegamesBetLevelsRequest) {
+		console.PrintFreegamesBetAmountsBodySchema,
+		func(request *dto.FreegamesBetAmountsRequest) {
 			request.Login = cfg.Login
 			request.Password = cfg.Password
 			request.Command = "bet_level"
@@ -63,5 +63,5 @@ func handleFreegamesBetLevel(ctx context.Context, command *cli.Command, metadata
 		return err
 	}
 
-	return cmdkit.WriteOutIfNeeded(response.Body, "freegames_bet_levels", command, metadata, cmdkit.FileTypeJSON)
+	return cmdkit.WriteOutIfNeeded(response.Body, "freegames_bet_amounts", command, metadata, cmdkit.FileTypeJSON)
 }
