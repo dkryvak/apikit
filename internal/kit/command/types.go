@@ -13,4 +13,5 @@ const (
 	FileTypeTXT  FileType = "txt"
 	FileTypeJSON FileType = "json"
 	FileTypeHTML FileType = "html"
+	FileTypeXML  FileType = "xml"
 )
