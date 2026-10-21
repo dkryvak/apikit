@@ -12,11 +12,12 @@ Grants a freegames bonus to a player. Request body must be a JSON object.
 | `reference` | yes | string | Operator-side reference for the grant. | `Ref_1_fsefgrh` |
 | `game_code` | yes | string | Unique game identifier (from `game list`). | `playson.100_joker_staxx` |
 | `rounds` | yes | integer | Number of rounds in the freegame session. | `10` |
-| `rounds_bet` | yes | integer | Bet per round in subunits (100 = 1.00 of currency). | `100` |
+| `round_bet` | yes | integer | Bet per round in subunits (100 = 1.00 of currency). | `100` |
 | `currency` | yes | string | Currency code, ISO 4217. | `USD` |
 | `end_date` | yes | date | ISO 8601 datetime `YYYY-MM-DDThh:mm:ss`. | `2023-05-11T12:22:35` |
 | `offer_end_date` | yes | date | ISO 8601 datetime `YYYY-MM-DDThh:mm:ss`. | `2023-05-11T12:22:35` |
 | `start_date` | no | date | ISO 8601 datetime `YYYY-MM-DDThh:mm:ss`. | `2023-05-11T12:22:35` |
+| `max_winnings` | no | integer | Max total winnings cap, in subunits. | `1000` |
 
 > `operator_id` and `brand_id` are required by the API but injected from `--config`.
 
@@ -30,10 +31,11 @@ Grants a freegames bonus to a player. Request body must be a JSON object.
   "reference": "Ref_1_fsefgrh",
   "game_code": "playson.100_joker_staxx",
   "rounds": 10,
-  "rounds_bet": 100,
+  "round_bet": 100,
   "currency": "USD",
   "end_date": "2023-05-11T12:22:35",
   "offer_end_date": "2023-05-11T12:22:35",
-  "start_date": "2023-05-11T12:22:35"
+  "start_date": "2023-05-11T12:22:35",
+  "max_winnings": 1000
 }
 ```

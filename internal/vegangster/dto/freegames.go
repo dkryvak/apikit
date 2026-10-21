@@ -11,11 +11,12 @@ type FreegamesGrantRequest struct {
 	Reference    string `json:"reference" validate:"required"`
 	GameCode     string `json:"game_code" validate:"required"`
 	Rounds       int    `json:"rounds" validate:"required"`
-	RoundsBet    int    `json:"rounds_bet" validate:"required"`
+	RoundBet     int    `json:"round_bet" validate:"required"`
 	Currency     string `json:"currency" validate:"required"`
 	EndDate      string `json:"end_date" validate:"required"`
 	OfferEndDate string `json:"offer_end_date" validate:"required"`
 	StartDate    string `json:"start_date"`
+	MaxWinnings  int    `json:"max_winnings,omitempty"`
 }
 
 // /operator/v1/freegames/cancel
