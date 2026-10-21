@@ -6,7 +6,7 @@ import (
 )
 
 // AleaConfig holds credentials and settings for the Alea APIs.
-// Alea exposes several hosts (customer GraphQL API, launch API, bonus REST API);
+// Alea exposes several hosts (customer GraphQL API, bonus REST API, launch API);
 // these values populate the request headers and the shared GraphQL variables.
 type AleaConfig struct {
 	alias string
@@ -14,11 +14,11 @@ type AleaConfig struct {
 	Env string `json:"env,omitempty"` // bound kube env (required for 'apikit kube', ignored for 'apikit local')
 
 	CustomerApiHost string `json:"customerApiHost"`         // GraphQL customer API (e.g. https://customer-api.aleaplay.com)
+	BonusApiHost    string `json:"bonusApiHost"`            // bonus REST API (e.g. https://bonus-api.aleaplay.com)
 	LaunchApiHost   string `json:"launchApiHost,omitempty"` // game launch API (e.g. https://play.aleaplay.com)
-	BonusApiHost    string `json:"bonusApiHost,omitempty"`  // bonus REST API (e.g. https://bonus-api.aleaplay.com)
 
 	EnvironmentToken string `json:"environmentToken"`        // Bearer JWT (Authorization header)
-	SecretKey        string `json:"secretKey"`               // Alea secret key (per brand/environment)
+	SecretKey        string `json:"secretKey"`               // Alea secret key (Digest signature; per brand/environment)
 	CasinoId         string `json:"casinoId"`                // Alea-CasinoId header
 	EnvironmentId    string `json:"environmentId,omitempty"` // Alea-EnvironmentId header (optional)
 	JurisdictionCode string `json:"jurisdictionCode"`        // GraphQL variable injected into queries
@@ -43,6 +43,9 @@ func (cfg *AleaConfig) BoundEnv() string {
 func (cfg *AleaConfig) Validate() error {
 	if cfg.CustomerApiHost == "" {
 		return fmt.Errorf("customerApiHost is required")
+	}
+	if cfg.BonusApiHost == "" {
+		return fmt.Errorf("bonusApiHost is required")
 	}
 	if cfg.EnvironmentToken == "" {
 		return fmt.Errorf("environmentToken is required")
