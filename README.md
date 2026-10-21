@@ -130,7 +130,7 @@ Unlike the other aggregators, Alea is accessed over **GraphQL** — a single
 contract is unchanged: the command picks the GraphQL query, its variables come
 from `--body`, and `jurisdictionCode` is injected from `--config`.
 
-Config fields: `customerApiHost` (required), `launchApiHost` / `bonusApiHost`
+Config fields: `customerApiHost`, `bonusApiHost` (required), `launchApiHost`
 (optional), `environmentToken`, `secretKey`, `casinoId` (required),
 `environmentId` (optional), `jurisdictionCode` (required).
 
@@ -139,6 +139,8 @@ apikit alea config import prod - < config.json
 apikit local alea call freegames bet-amounts --config prod \
   --body '{"gameId":15836,"currencies":["EUR","USD"]}'
 apikit kube  alea call freegames bet-amounts --config prod --body - < vars.json
+apikit kube  alea call freegames grant  --config prod --body - < grant.json
+apikit kube  alea call freegames cancel --config prod --body '{"casinoBonusId":"856543-603"}'
 ```
 
 
