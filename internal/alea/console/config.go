@@ -42,17 +42,17 @@ func PromptConfig(module command.ModuleName) (*config.AleaConfig, error) {
 	}
 	cfg.CustomerApiHost = customerApiHost
 
+	bonusApiHost, err := console.Prompt(reader, "Bonus Api Host (e.g., 'https://bonus-api.aleaplay.com')")
+	if err != nil {
+		return nil, err
+	}
+	cfg.BonusApiHost = bonusApiHost
+
 	launchApiHost, err := console.PromptOptional(reader, "Launch Api Host (optional; e.g., 'https://play.aleaplay.com')")
 	if err != nil {
 		return nil, err
 	}
 	cfg.LaunchApiHost = launchApiHost
-
-	bonusApiHost, err := console.PromptOptional(reader, "Bonus Api Host (optional; e.g., 'https://bonus-api.aleaplay.com')")
-	if err != nil {
-		return nil, err
-	}
-	cfg.BonusApiHost = bonusApiHost
 
 	environmentToken, err := console.Prompt(reader, "Environment Token (Bearer JWT)")
 	if err != nil {
@@ -95,11 +95,9 @@ func PrintConfig(cfg *config.AleaConfig) {
 		fmt.Printf("Env: %s\n", cfg.Env)
 	}
 	fmt.Printf("Customer Api Host: %s\n", cfg.CustomerApiHost)
+	fmt.Printf("Bonus Api Host: %s\n", cfg.BonusApiHost)
 	if cfg.LaunchApiHost != "" {
 		fmt.Printf("Launch Api Host: %s\n", cfg.LaunchApiHost)
-	}
-	if cfg.BonusApiHost != "" {
-		fmt.Printf("Bonus Api Host: %s\n", cfg.BonusApiHost)
 	}
 	fmt.Printf("Environment Token: %s\n", cfg.EnvironmentToken)
 	fmt.Printf("Secret Key: %s\n", cfg.SecretKey)
